@@ -1,8 +1,5 @@
 all:
-	ghc --make main.hs
-
+	ghc --make -o simplify-bkg SimplifyBKGMain.hs
 clean:
-	rm -f main{,.o,.hi} *.zip 2>/dev/null
+	rm *.hi *.o simplify-bkg
 
-pack:
-	zip -r flp-fun-xormos00.zip main.hs README
