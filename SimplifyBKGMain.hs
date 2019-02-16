@@ -20,13 +20,13 @@ main = do
     args <- getArgs
     let (option, input) = processOptions args
     content <- parseInput input
-    bkg <- getResultedBKG option content
+    bkg <- eliminateRulesBKG option content
     putStrLn $ show bkg
     return ()
 
 -- Gets context-free grammar from input in the form specified by param
-getResultedBKG :: Int -> String -> IO BKG
-getResultedBKG param content
+eliminateRulesBKG :: Int -> String -> IO BKG
+eliminateRulesBKG param content
     | param==0 = getBKG content
     | param==1 = getBKG content
     | param==2 = getBKG content

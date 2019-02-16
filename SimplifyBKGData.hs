@@ -12,20 +12,22 @@ type NonTerminal = String
 type Terminal = String
 
 data Rule = Rule
-    { leftSide :: NonTerminal
-    , rightSide :: [String]
-    } deriving (Eq)
+{ 
+    leftSide :: NonTerminal, 
+    rightSide :: [String]
+} deriving (Eq)
+
+data BKG = BKG
+{ 
+    nonTerminals :: [NonTerminal],
+    terminals :: [Terminal],
+    startState :: NonTerminal,
+    rules :: [Rule]
+} deriving (Eq)    
 
 -- intersperse :: Char -> Text -> Text
 instance Show Rule where
     show (Rule left right) = left ++ "->" ++ concat (intersperse "" right)
-
-data BKG = BKG
-    { nonTerminals :: [NonTerminal]
-    , terminals :: [Terminal]
-    , startState :: NonTerminal
-    , rules :: [Rule]
-    } deriving (Eq)
 
 -- intersperse :: Char -> Text -> Text
 instance Show BKG where
