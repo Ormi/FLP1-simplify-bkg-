@@ -8,26 +8,27 @@ module SimplifyBKGData where
 
 import Data.List
 
-type NonTerminal = String
-type Terminal = String
+-- rename of existring data tyoes
+-- type xxx = [Int]
+type NonTerminal = String -- <=> [Char]
+type Terminal = String -- <=> [Char]
+type NonTermTerminal = String
 
-data Rule = Rule
-{ 
-    leftSide :: NonTerminal, 
-    rightSide :: [String]
-} deriving (Eq)
+data Rule = Rule { 
+    leftSide :: NonTerminal,  -- [Char]
+    rightSide :: NonTermTerminal -- x -- [[Char]]
+	} deriving (Eq)
 
-data BKG = BKG
-{ 
-    nonTerminals :: [NonTerminal],
-    terminals :: [Terminal],
-    startState :: NonTerminal,
+data BKG = BKG { 
+    nonTerminals :: [NonTerminal], -- [[Char]]
+    terminals :: [Terminal], -- [[Char]]
+    startState :: NonTerminal, -- [Char]
     rules :: [Rule]
-} deriving (Eq)    
+	} deriving (Eq)    
 
 -- intersperse :: Char -> Text -> Text
 instance Show Rule where
-    show (Rule left right) = left ++ "->" ++ concat (intersperse "" right)
+    show (Rule left right) = left ++ "->" ++ right --concat (intersperse "" right)
 
 -- intersperse :: Char -> Text -> Text
 instance Show BKG where

@@ -28,7 +28,7 @@ main = do
 eliminateRulesBKG :: Int -> String -> IO BKG
 eliminateRulesBKG param content
     | param==0 = getBKG content
-    | param==1 = getBKG content
+    | param==1 = step1 content
     | param==2 = getBKG content
 
 -- Reads input into a string
