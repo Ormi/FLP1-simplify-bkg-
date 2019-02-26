@@ -41,13 +41,13 @@ orderBKG grammar@BKG{
                     startState = startState,
                     rules = rules } = BKG newNonterminals newTerminals startState rules
     where
-        newNonterminals = checkOrder (sort nonTerminals)
+        newNonterminals = checkOrder nonTerminals
         newTerminals = sort terminals
 
 checkOrder :: [NonTerminal] -> [NonTerminal]
-checkOrder nonTerminals = if (last (nonTerminals) == "S")
+checkOrder nonTerminals = if (last (nonTerminals) == "S") && length nonTerminals > 2
                             then (last (nonTerminals) : (init (nonTerminals)))
-                            else (sort nonTerminals)
+                            else nonTerminals
 
 allDifferent :: (Ord a) => [a] -> Bool
 allDifferent xs = length (nub xs) == length xs
@@ -160,11 +160,11 @@ parseBKG _ = error "[ERROR] Grammar syntax, bad input"
 
 step1 :: String -> IO BKG
 step1 content = do
-    let lns = lines content
-    let rls = checkDuplicatedRules lns
-    let bkg = parseBKG rls
-    let dpc = checkDuplicityBKG bkg
-    let bkgStep1 = applyFirstAlgorithm dpc
+    let lineContent = lines content
+    let duplicateCheck = checkDuplicatedRules lineContent
+    let parsedBKG = parseBKG duplicateCheck
+    let duplicateCheckRules = checkDuplicityBKG parsedBKG
+    let bkgStep1 = applyFirstAlgorithm duplicateCheckRules
     let orderedBKG = orderBKG bkgStep1
     return orderedBKG
 
@@ -192,7 +192,7 @@ createNonTerminalSet BKG{nonTerminals = nonTerminals,
                 terminals = terminals,
                 startState = startState,
                 rules = rules } 
-                vr = [nt | nt <- nonTerminals , any (\r -> nt == (leftSide r)) vr ] 
+                newSet = [nonterminals | nonterminals <- nonTerminals , any (\r -> nonterminals == (leftSide r)) newSet ] 
 
 filterRules :: BKG -> [NonTerminal] -> [Rule]
 filterRules BKG{nonTerminals = nonTerminals, 
@@ -214,11 +214,11 @@ isTermNonterm rightSideTerms terminals (x:xs) =
 
 step2 :: String -> IO BKG
 step2 content = do
-    let lns = lines content
-    let rls = checkDuplicatedRules lns
-    let bkg = parseBKG rls
-    let dpc = checkDuplicityBKG bkg
-    let bkgStep1 = applyFirstAlgorithm dpc
+    let lineContent = lines content
+    let duplicateCheck = checkDuplicatedRules lineContent
+    let parsedBKG = parseBKG duplicateCheck
+    let duplicateCheckRules = checkDuplicityBKG parsedBKG
+    let bkgStep1 = applyFirstAlgorithm duplicateCheckRules
     let bkgStep2 = applySecondAlgorithm bkgStep1
     let orderedBKG = orderBKG bkgStep2
     return orderedBKG
@@ -252,7 +252,7 @@ createNewRulesSet BKG{nonTerminals = nonTerminals,
                 terminals = terminals,
                 startState = startState,
                 rules = rules } 
-                previousRules = [vi | vi <- termNontermSet, any (\r -> (not (null (intersect vi (rightSide r))))) filterRules] 
+                previousRules = [newSet | newSet <- termNontermSet, any (\r -> (not (null (intersect newSet (rightSide r))))) filterRules] 
     where
         filterRules = filterRulesSet rules previousRules
         termNontermSet = nonTerminals ++ terminals
