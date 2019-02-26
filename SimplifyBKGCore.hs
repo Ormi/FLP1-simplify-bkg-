@@ -4,10 +4,7 @@
 -- xormos00@stud.fit.vutbr.cz
 -- February 2019
 
-
--- @TODO parse epsylon on rightSide side add rules add parseepsylon
-
-module SimplifyBKGCore (getBKG, step1) where
+module SimplifyBKGCore (getBKG, step1, step2) where
 
 import System.IO
 import Data.List
@@ -27,13 +24,33 @@ isNonTerminal :: String -> Bool
 isNonTerminal [x] = x `elem` ['A'..'Z']
 isNonTerminal _ = False
 
--- isSameTerminal :: String -> String -> Bool
--- isSameTerminal [x] [y] = x == y 
--- isSameTerminal [x] _ = False
--- isSameTerminal _ [y] = False
--- isSameTerminal :: String -> String
--- isSameTerminal [x] = print x
+removeDuplicates :: [NonTerminal] -> [NonTerminal]
+removeDuplicates = foldl (\seen x -> if x `elem` seen
+                                      then seen
+                                      else seen ++ [x]) []
 
+intersect' :: [NonTerminal] -> [NonTermTerminal] -> [NonTerminal]
+intersect' [] _ = []
+intersect' (x:xs) l | elem x l = x : intersect xs l
+                   | otherwise = intersect xs l
+
+orderBKG :: BKG -> BKG
+orderBKG grammar@BKG{
+                    nonTerminals = nonTerminals, 
+                    terminals = terminals,
+                    startState = startState,
+                    rules = rules } = BKG newNonterminals newTerminals startState rules
+    where
+        newNonterminals = checkOrder (sort nonTerminals)
+        newTerminals = sort terminals
+
+checkOrder :: [NonTerminal] -> [NonTerminal]
+checkOrder nonTerminals = if (last (nonTerminals) == "S")
+                            then (last (nonTerminals) : init (nonTerminals))
+                            else nonTerminals
+
+allDifferent :: (Ord a) => [a] -> Bool
+allDifferent xs = length (nub xs) == length xs
 --------------------------------------------------------------------------------
 --------------- Input parsing and grammar validity checks ----------------------
 --------------------------------------------------------------------------------
@@ -102,160 +119,100 @@ parseBKG _ = error "[ERROR] Grammar syntax, bad input"
 ------------------------------ Core Logic --------------------------------------
 --------------------------------------------------------------------------------
 
--- doStep1 :: [String] -> [String]
--- doStep1 (nonTerminals:terminals:startState:rules) = [nonTerminals] ++ [terminals] ++ [startState] ++ step1rules (map (splitOn "->") (reverse rules))
-
--- -- "[[\"C\",\"c\"],[\"A\",\"AC\"],[\"B\",\"Bb\"],[\"B\",\"b\"],[\"S\",\"B\"],[\"S\",\"A\"]]"
--- step1rules :: [[String]] -> String
--- step1rules x = 
---     if (isTerminal(head x))
---         then 
-
-
--- step1rules :: [String] -> String
--- step1rules (x:xs) = (processRule x) + (step1rules xs) 
-
--- processRule :: String -> String
--- processRule x = (splitOn "->" x)
-
 step1 :: String -> IO BKG
 step1 content = do
     let lns = lines content
-    let bkg = parseBKG lns
-    let newbkg = alg1 bkg
-    return newbkg
+    let bkgParsed = parseBKG lns
+    let bkgStep1 = applyFirstAlgorithm bkgParsed
+    let orderedBKG = orderBKG bkgStep1
+    return orderedBKG
 
-alg1 :: BKG -> BKG
-alg1 grammar@BKG{nonTerminals = nonTerminals, 
+applyFirstAlgorithm :: BKG -> BKG
+applyFirstAlgorithm grammar@BKG{
+                nonTerminals = nonTerminals, 
                 terminals = terminals,
                 startState = startState,
                 rules = rules } = BKG newNonterminals terminals startState newRules 
     where
-        ntSet = getNtSet grammar []
-        -- create new set of nonteminal and remove duplicate. 
-        newNonterminals = nub $ ((ntSet) ++ (startState:[]))   
-        -- creat new set of rules, if left side of rule is in Nt set and right side is combination of terminal and nonterminal symbols 
-        newRules = [r | r <- rules, ((elem (leftSide r) ntSet) && (isTermNonterm ntSet terminals (rightSide r))) ]   
+        nonTerminalSet = getNewNonTerminalSet grammar []
+        newNonterminals = removeDuplicates ((nonTerminalSet) ++ (startState:[]))   
+        newRules = [r | r <- rules, (((leftSide r) `elem` nonTerminalSet) && (isTermNonterm nonTerminalSet terminals (rightSide r))) ]   
 
--- Iterates until the final set of Nt formed. Nt is set ..
-getNtSet :: BKG -> [NonTerminal] -> [NonTerminal]
-getNtSet g prevNt = if (length(prevNt) == length(newNt)) then prevNt else getNtSet g $ nub (prevNt ++ newNt) 
-    where
-        -- filter rules and create Ni set from left side of rules. 
-        newNt = createNiSet g $ filterRules g prevNt
+getNewNonTerminalSet :: BKG -> [NonTerminal] -> [NonTerminal]
+getNewNonTerminalSet grammar previousNonTerminal =
+    if (length(previousNonTerminal) == length(newNonTerminal)) 
+        then previousNonTerminal 
+        else getNewNonTerminalSet grammar (removeDuplicates (previousNonTerminal ++ newNonTerminal))
+        where
+            newNonTerminal = createNonTerminalSet grammar (filterRules grammar previousNonTerminal)
 
--- Create Ni set from left side of filter rules. 
-createNiSet :: BKG -> [Rule] -> [NonTerminal]
-createNiSet BKG{nonTerminals = nonTerminals, 
+createNonTerminalSet :: BKG -> [Rule] -> [NonTerminal]
+createNonTerminalSet BKG{nonTerminals = nonTerminals, 
                 terminals = terminals,
                 startState = startState,
-                rules = rules } vr = [nt | nt <- nonTerminals , any (\r -> nt == (leftSide r)) vr ] 
+                rules = rules } 
+                vr = [nt | nt <- nonTerminals , any (\r -> nt == (leftSide r)) vr ] 
 
 filterRules :: BKG -> [NonTerminal] -> [Rule]
 filterRules BKG{nonTerminals = nonTerminals, 
                 terminals = terminals,
                 startState = startState,
-                rules = rules } prevNt = [r | r <- rules, ((isTermNonterm  prevNt terminals (rightSide r)) ) ]
+                rules = rules } 
+                previousNonTerminal = [r | r <- rules, ((isTermNonterm  previousNonTerminal terminals (rightSide r)) ) ]
 
--- Checks characters from right side of the rule. 
 isTermNonterm :: [NonTerminal] -> [Terminal] -> NonTerminal -> Bool
-isTermNonterm prevNt terminals [] = True 
-isTermNonterm prevNt terminals (n:ns) = if (elem (n:[]) terminals || (elem (n:[]) prevNt) || (n == '#')) then isTermNonterm prevNt terminals ns else False 
+isTermNonterm rightSideTerms terminals [] = True 
+isTermNonterm rightSideTerms terminals (x:xs) = 
+    if ((x:[]) `elem` terminals || ((x:[]) `elem` rightSideTerms) || (x == '#')) 
+        then isTermNonterm rightSideTerms terminals xs 
+        else False 
 
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
 
+step2 :: String -> IO BKG
+step2 content = do
+    let lns = lines content
+    let bkgParsed = parseBKG lns
+    let bkgStep1 = applyFirstAlgorithm bkgParsed
+    let bkgStep2 = applySecondAlgorithm bkgStep1
+    let orderedBKG = orderBKG bkgStep2
+    return orderedBKG
 
+applySecondAlgorithm :: BKG -> BKG
+applySecondAlgorithm grammar@BKG{
+                    nonTerminals = nonTerminals, 
+                    terminals = terminals,
+                    startState = startState,
+                    rules = rules } = BKG newNonterminals newTerminals startState newRules
+    where
+        newRulesSet = getNewRules grammar (startState:[])
+        newNonterminals = intersect' newRulesSet nonTerminals
+        newTerminals = intersect' newRulesSet terminals
+        newRules = filterRulesSet rules newRulesSet
 
+getNewRules :: BKG -> [NonTerminal] -> [NonTerminal]  
+getNewRules grammar@BKG{nonTerminals = nonTerminals, 
+                terminals = terminals,
+                startState = startState,
+                rules = rules } 
+                previousRules = 
+    if (length(previousRules) == length(newRulesSet)) 
+        then previousRules 
+        else (getNewRules grammar newRulesSet) 
+        where
+            newRulesSet = removeDuplicates (previousRules ++ (createNewRulesSet grammar previousRules) )
 
-
--- step1 :: String -> IO BKG
--- step1 content = do
---     putStr "====\n"
---     print content
---     putStr "===\n"    
---     bkg <- getBKG content
---     putStr "====\n"
---     print bkg
---     putStr "===\n"
---     putStr "Debug\n======\n"
---     putStr (showNonTerminals (nonTerminals bkg))
---     putStr "\n"
---     putStr (showTerminals (terminals bkg))
---     putStr "\n"    
---     putStr (startState bkg)
---     putStr "\n"  
---     -- let newRules = checkRules (rules bkg)  
---     -- let newBKG = BKG (nonTerminals bkg) (terminals bkg) (startState bkg) newRules
-
---     putStr (showRules (rules bkg))
---     -- showRulesPrime (rules bkg)
---     putStr "\n========\n\n"
---     -- let showNonTerminals (nonTerminals bkg) 
---     -- let newBKG = BKG (nonTerminals bkg) (terminals bkg) (startState bkg) (rules bkg) 
---     return bkg
---     -- bkg <- getBKG content
---     -- let test = getGroups (nonTerminals bkg) (rules bkg)
---     -- -- let newRules = getNewRules test (rules bkg)
---     -- let newBkg = BKG (nonTerminals bkg) (terminals bkg) (startState bkg) (rules bkg) --newRules
---     -- return newBkg
-
--- -- checkRules :: [Rule] -> [Rule]
--- -- checkRules 
-
--- showNonTerminals :: [NonTerminal] -> String
--- showNonTerminals x = show x
-
--- showTerminals :: [Terminal] -> String
--- showTerminals x = show x
-
--- showRules :: [Rule] -> String
--- showRules x = showMoreRules (head (reverse x)) -- ++ showMoreRules (tail x)
---     -- if showMoreRules (head x) then do
---     --             show "rovnaju sa"
---     --             showRules (tail x)
---     --           else
---     --             showRules (tail x)
---                 -- if (showMoreRules (head x))then
---                 --     Rule leftSide ([[x] | x <- rightSide])
---                 -- else
---                 --     error "[ERROR] Rules syntax, bad input"                
-
--- showMoreRules :: Rule -> String
--- showMoreRules x = (show ((leftSide x) ++ (showNonTerminals (rightSide x))))
--- showMoreRules x = (leftSide x) `elem` (rightSide x)
--- showMoreRules _ = False
-
--- ++ showNonTerminals(rightSide (head x)))
-
--- -- Gets context-free grammar without simple rules from input
--- getBKGWithoutSimpleRules :: String -> IO BKG
--- getBKGWithoutSimpleRules content = do
---     bkg <- getBKG content
---     let test = getGroups (nonTerminals bkg) (rules bkg)
---     let newRules = getNewRules test (rules bkg)
---     let newBkg = BKG (nonTerminals bkg) (terminals bkg) (start bkg) newRules
---     return newBkg
-
--- -- Gets list of nonTerminals generated by specified nonTerminals
--- getGroups :: [Nonterminal] -> [Rule] -> [(Nonterminal, [Nonterminal])]
--- getGroups [] _ = []
--- getGroups (x:xs) rules = [(x, [x] ++ (generate ([x]) rules))] ++ getGroups xs rules
---     where
---         generate :: [Nonterminal] -> [Rule] -> [Nonterminal]
---         generate [] _ = []
---         generate (x:xs) rules = (generatedNonterminals x) ++ (generate (generatedNonterminals x) rules)
---             where
---                 generatedNonterminals :: Nonterminal -> [Nonterminal]
---                 generatedNonterminals x = [head (right y) | y <- (getSimpleRules (getNonterminalRules x rules))]
-
--- -- Gets new rules for context-free grammar without simple rules
--- getNewRules :: [(Nonterminal, [Nonterminal])] -> [Rule] -> [Rule]
--- getNewRules [] rules = []
--- getNewRules (x:xs) rules = generate (snd x) (fst x) rules ++ getNewRules xs rules
---     where
---         generate :: [Nonterminal] -> Nonterminal -> [Rule] -> [Rule]
---         generate [] _ _ = []
---         generate (y:ys) nonterminal rules = [Rule nonterminal (right z) | z <- (getNotSimpleRules (getNonterminalRules y rules))] ++ generate ys nonterminal rules
-
--- -- Gets rules generated by specified nonterminal
--- getNonterminalRules :: Nonterminal -> [Rule] -> [Rule]
--- getNonterminalRules nonterminal rules = [x | x <- rules, (left x) == nonterminal]    
+createNewRulesSet :: BKG -> [NonTerminal] -> [NonTerminal]
+createNewRulesSet BKG{nonTerminals = nonTerminals, 
+                terminals = terminals,
+                startState = startState,
+                rules = rules } 
+                previousRules = [vi | vi <- termNontermSet, any (\r -> (not (null (intersect vi (rightSide r))))) filterRules] 
+    where
+        filterRules = filterRulesSet rules previousRules
+        termNontermSet = nonTerminals ++ terminals
+    
+filterRulesSet :: [Rule] -> [NonTerminal] -> [Rule]
+filterRulesSet rules previousRules = [r | r <- rules, ((leftSide r) `elem` previousRules) ]
