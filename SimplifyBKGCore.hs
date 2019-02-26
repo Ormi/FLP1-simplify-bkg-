@@ -46,19 +46,58 @@ orderBKG grammar@BKG{
 
 checkOrder :: [NonTerminal] -> [NonTerminal]
 checkOrder nonTerminals = if (last (nonTerminals) == "S")
-                            then (last (nonTerminals) : init (nonTerminals))
-                            else nonTerminals
+                            then (last (nonTerminals) : (init (nonTerminals)))
+                            else (sort nonTerminals)
 
 allDifferent :: (Ord a) => [a] -> Bool
 allDifferent xs = length (nub xs) == length xs
+
+isElementsDuplicated :: [NonTerminal] -> Bool
+isElementsDuplicated a = if a == removeDuplicates a 
+                                    then False
+                                    else True    
+
+isRuleDuplicated :: [String] -> Bool
+isRuleDuplicated a = if a == removeDuplicates a 
+                                    then False
+                                    else True                                        
+
+-- isRuleDuplicated :: [[NonTerminal]] -> [[NonTerminal]]
+-- isRuleDuplicated a = print a  
+
 --------------------------------------------------------------------------------
 --------------- Input parsing and grammar validity checks ----------------------
 --------------------------------------------------------------------------------
 getBKG :: String -> IO BKG
 getBKG content = do
     let lns = lines content
-    let bkg = parseBKG lns
-    return bkg
+    let rls = checkDuplicatedRules lns
+    let bkg = parseBKG rls
+    let dpc = checkDuplicityBKG bkg
+    return dpc
+
+-- checkDuplicityBKG :: [String] -> [String]
+-- checkDuplicityBKG (nonTerminals:terminals:startState:rules) = if
+--     (isElementsDuplicated nonTerminals && isElementsDuplicated terminals && isElementsDuplicated rules)
+--     then parseBKG (nonTerminals:terminals:startState:rules)
+--     else "[ERROR]"
+
+checkDuplicatedRules :: [String] -> [String]
+checkDuplicatedRules (a:b:c:d) = if (isRuleDuplicated d)
+                            then error "[ERROR] Duplicated rules"
+                            else (a:b:c:d)
+
+checkDuplicityBKG :: BKG -> BKG
+checkDuplicityBKG grammar = BKG checkNonTerminals checkTerminals checkStartState checkRules
+    where 
+        checkNonTerminals = if (isElementsDuplicated (nonTerminals grammar))
+                            then error "[ERROR] Duplicated NonTerminal"
+                            else (nonTerminals grammar)
+        checkTerminals = if (isElementsDuplicated (terminals grammar))
+                            then error "[ERROR] Duplicated Terminal"
+                            else (terminals grammar)
+        checkStartState = (startState grammar)
+        checkRules =(rules grammar)                                                                              
 
 parseBKG :: [String] -> BKG
 parseBKG (nonTerminals:terminals:startState:rules) =
@@ -110,7 +149,7 @@ parseBKG (nonTerminals:terminals:startState:rules) =
                         leftCheck _ = False
                         rightCheck :: String -> Bool
                         rightCheck [] = False
-                        rightCheck [x] = x `elem` ([head x | x <- parseTerminals] ++ [head y | y <- parseNonTerminals])
+                        rightCheck [x] = (x `elem` ([head x | x <- parseTerminals] ++ [head y | y <- parseNonTerminals])) || (x == '#')
                         rightCheck (x:xs) = x `elem` ([head x | x <- parseTerminals] ++ [head y | y <- parseNonTerminals]) && rightCheck xs
                 generateRule _ = error "[ERROR] Rule syntax, rules is empty, bad iput"
 parseBKG _ = error "[ERROR] Grammar syntax, bad input"
@@ -122,8 +161,10 @@ parseBKG _ = error "[ERROR] Grammar syntax, bad input"
 step1 :: String -> IO BKG
 step1 content = do
     let lns = lines content
-    let bkgParsed = parseBKG lns
-    let bkgStep1 = applyFirstAlgorithm bkgParsed
+    let rls = checkDuplicatedRules lns
+    let bkg = parseBKG rls
+    let dpc = checkDuplicityBKG bkg
+    let bkgStep1 = applyFirstAlgorithm dpc
     let orderedBKG = orderBKG bkgStep1
     return orderedBKG
 
@@ -174,8 +215,10 @@ isTermNonterm rightSideTerms terminals (x:xs) =
 step2 :: String -> IO BKG
 step2 content = do
     let lns = lines content
-    let bkgParsed = parseBKG lns
-    let bkgStep1 = applyFirstAlgorithm bkgParsed
+    let rls = checkDuplicatedRules lns
+    let bkg = parseBKG rls
+    let dpc = checkDuplicityBKG bkg
+    let bkgStep1 = applyFirstAlgorithm dpc
     let bkgStep2 = applySecondAlgorithm bkgStep1
     let orderedBKG = orderBKG bkgStep2
     return orderedBKG
