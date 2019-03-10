@@ -1,10 +1,13 @@
--- SimplifyBKG
+-- simplify-bkg Main
 -- FLP Functional Project
 -- Michal Ormos (xormos00)
 -- xormos00@stud.fit.vutbr.cz
 -- February 2019
 
--- @TODO osetri stdin ale aj std file
+-- @TODO pridat dalsie let ktore osetruje ten posledny zly test, ktory osetri to co ma
+-- @TODO sprav to tak, uprav to tak ako to mal na 3tom cviku TM machina example
+-- @TODO akce s vedlejsimi efekty nech nie su v modulu main
+-- @TODO
 
 module Main where
 
