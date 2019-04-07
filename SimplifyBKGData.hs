@@ -8,17 +8,18 @@ module SimplifyBKGData where
 
 import Data.List
 
--- rename of existring data tyoes
 -- type xxx = [Int]
 type NonTerminal = String -- <=> [Char]
 type Terminal = String -- <=> [Char]
 type NonTermTerminal = String
 
+-- Types of Rules
 data Rule = Rule { 
     leftSide :: NonTerminal,  -- [Char]
     rightSide :: NonTermTerminal -- x -- [[Char]]
 	} deriving (Eq)
 
+-- Context free Grammar (BKG) types
 data BKG = BKG { 
     nonTerminals :: [NonTerminal], -- [[Char]]
     terminals :: [Terminal], -- [[Char]]
@@ -32,4 +33,4 @@ instance Show Rule where
 
 -- intersperse :: Char -> Text -> Text
 instance Show BKG where
-    show (BKG nonTerminals terminals startState rules) = concat (intersperse "," nonTerminals) ++ "\n" ++ concat (intersperse "," terminals) ++ "\n" ++ startState ++ "\n" ++ concat (intersperse "\n" (map show rules))
+    show (BKG nonTerminals terminals startState rules) = intercalate "," nonTerminals ++ "\n" ++ intercalate "," terminals ++ "\n" ++ startState ++ "\n" ++ intercalate "\n" (map show rules)

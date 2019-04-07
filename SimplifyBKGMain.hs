@@ -4,48 +4,45 @@
 -- xormos00@stud.fit.vutbr.cz
 -- February 2019
 
--- @TODO pridat dalsie let ktore osetruje ten posledny zly test, ktory osetri to co ma
--- @TODO sprav to tak, uprav to tak ako to mal na 3tom cviku TM machina example
--- @TODO akce s vedlejsimi efekty nech nie su v modulu main
--- @TODO
-
 module Main where
 
 import System.Environment
 import System.IO
 import System.Exit
 
+-- import modules with data type and core functionality
 import SimplifyBKGCore
 import SimplifyBKGData
 
+-- process the file to the program
 main :: IO ()
 main = do
     args <- getArgs
     let (option, input) = processOptions args
     content <- parseInput input
-    bkg <- eliminateRulesBKG option content
-    putStrLn $ show bkg
+    grammar <- eliminateRulesBKG option content
+    print grammar
     return ()
 
--- Gets context-free grammar from input in the form specified by param
+-- determine arguments
 eliminateRulesBKG :: Int -> String -> IO BKG
-eliminateRulesBKG param content
-    | param==0 = getBKG content
-    | param==1 = step1 content
-    | param==2 = step2 content
+eliminateRulesBKG parsedArg content
+    | parsedArg==0 = getBKG content
+    | parsedArg==1 = step1 content
+    | parsedArg==2 = step2 content
 
--- Reads input into a string
-parseInput :: [Char] -> IO String
+-- read file as stream fo cahrs and parse it to IO with genContents
+parseInput :: String -> IO String
 parseInput [] = getContents
 parseInput x = readFile x
 
--- Parse list of arguments into couple
+-- processing of command line arguments
 processOptions :: [String] -> (Int,String)
 processOptions [] = error "[Error] Input expect one or two arguments -i with combination of -1/-2 see README for more information"
-processOptions [x] = processOptions [x, ""]
-processOptions [x,y]
-    | x=="-i" = (0, y)
-    | x=="-1" = (1, y)
-    | x=="-2" = (2, y)
+processOptions [arg] = processOptions [arg, ""]
+processOptions [arg,parsedArg]
+    | arg=="-i" = (0, parsedArg)
+    | arg=="-1" = (1, parsedArg)
+    | arg=="-2" = (2, parsedArg)
     | otherwise = error "[Error] Unknown argument"
 processOptions _ = error "[Error] Expects 2 arguments"
